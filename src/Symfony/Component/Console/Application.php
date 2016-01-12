@@ -11,6 +11,9 @@
 
 namespace Symfony\Component\Console;
 
+use Symfony\Component\Console\Environment\Constraint\ConstraintInterface;
+use Symfony\Component\Console\Environment\EnvironmentValidator;
+use Symfony\Component\Console\Environment\Environment;
 use Symfony\Component\Console\Exception\ExceptionInterface;
 use Symfony\Component\Console\Helper\DebugFormatterHelper;
 use Symfony\Component\Console\Helper\ProcessHelper;
@@ -66,6 +69,12 @@ class Application
     private $dispatcher;
     private $terminalDimensions;
     private $defaultCommand;
+    private $env;
+
+    /**
+     * @var ConstraintInterface[]
+     */
+    private $environmentConstraints;
 
     /**
      * Constructor.
@@ -84,6 +93,9 @@ class Application
         foreach ($this->getDefaultCommands() as $command) {
             $this->add($command);
         }
+
+        $this->env = new Environment();
+        $this->environmentConstraints = array();
     }
 
     public function setDispatcher(EventDispatcherInterface $dispatcher)
@@ -114,6 +126,10 @@ class Application
         $this->configureIO($input, $output);
 
         try {
+            if (count($this->environmentConstraints) > 0) {
+                $this->validateEnvironment();
+            }
+
             $exitCode = $this->doRun($input, $output);
         } catch (\Exception $e) {
             if (!$this->catchExceptions) {
@@ -227,6 +243,14 @@ class Application
     public function getDefinition()
     {
         return $this->definition;
+    }
+
+    /**
+     * @return Environment
+     */
+    public function getEnvironment()
+    {
+        return $this->env;
     }
 
     /**
@@ -593,6 +617,7 @@ class Application
             if (defined('HHVM_VERSION') && $width > 1 << 31) {
                 $width = 1 << 31;
             }
+
             $formatter = $output->getFormatter();
             $lines = array();
             foreach (preg_split('/\r?\n/', $e->getMessage()) as $line) {
@@ -605,12 +630,15 @@ class Application
                 }
             }
 
-            $messages = array();
-            $messages[] = $emptyLine = $formatter->format(sprintf('<error>%s</error>', str_repeat(' ', $len)));
-            $messages[] = $formatter->format(sprintf('<error>%s%s</error>', $title, str_repeat(' ', max(0, $len - $this->stringWidth($title)))));
+            $messages = array(
+                $emptyLine = $formatter->format(sprintf('<error>%s</error>', str_repeat(' ', $len))),
+                $formatter->format(sprintf('<error>%s%s</error>', $title, str_repeat(' ', max(0, $len - $this->stringWidth($title))))),
+            );
+
             foreach ($lines as $line) {
                 $messages[] = $formatter->format(sprintf('<error>  %s  %s</error>', $line[0], str_repeat(' ', $len - $line[1])));
             }
+
             $messages[] = $emptyLine;
             $messages[] = '';
 
@@ -1018,6 +1046,11 @@ class Application
         $this->defaultCommand = $commandName;
     }
 
+    public function addEnvironmentConstraint(ConstraintInterface $constraint)
+    {
+        $this->environmentConstraints[] = $constraint;
+    }
+
     private function stringWidth($string)
     {
         if (false === $encoding = mb_detect_encoding($string, null, true)) {
@@ -1080,5 +1113,11 @@ class Application
         }
 
         return $namespaces;
+    }
+
+    private function validateEnvironment()
+    {
+        $validator = new EnvironmentValidator($this->env);
+        $validator->validate($this->environmentConstraints);
     }
 }

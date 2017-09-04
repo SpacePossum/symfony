@@ -1,5 +1,5 @@
 <select
-    <?php if ($required && null === $placeholder && $placeholder_in_choices === false && $multiple === false && (!isset($attr['size']) || $attr['size'] <= 1)):
+    <?php if ($required && null === $placeholder && false === $placeholder_in_choices && false === $multiple && (!isset($attr['size']) || $attr['size'] <= 1)):
         $required = false;
     endif; ?>
     <?php echo $view['form']->block($form, 'widget_attributes', array(

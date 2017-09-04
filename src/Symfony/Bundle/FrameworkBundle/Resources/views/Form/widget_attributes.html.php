@@ -5,9 +5,9 @@ id="<?php echo $view->escape($id) ?>" name="<?php echo $view->escape($full_name)
 <?php if ('readonly' === $k && $read_only): continue; endif ?>
 <?php if (in_array($k, array('placeholder', 'title'), true)): ?>
 <?php printf('%s="%s" ', $view->escape($k), $view->escape($view['translator']->trans($v, array(), $translation_domain))) ?>
-<?php elseif ($v === true): ?>
+<?php elseif (true === $v): ?>
 <?php printf('%s="%s" ', $view->escape($k), $view->escape($k)) ?>
-<?php elseif ($v !== false): ?>
+<?php elseif (false !== $v): ?>
 <?php printf('%s="%s" ', $view->escape($k), $view->escape($v)) ?>
 <?php endif ?>
 <?php endforeach ?>
